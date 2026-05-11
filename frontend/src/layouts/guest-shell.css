@@ -1,0 +1,19 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family:
+    Montserrat,
+    system-ui,
+    sans-serif;
+}
+
+.dev-bar {
+  margin-top: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #eceae6;
+  border-top: 1px solid rgba(15, 20, 25, 0.08);
+  text-align: center;
+}

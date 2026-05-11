@@ -1,0 +1,304 @@
+.page-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-height: 100vh;
+  background: var(--premium-bg);
+}
+
+.public-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1.25rem, 4vw, 4rem);
+  box-sizing: border-box;
+  background: var(--premium-bg);
+}
+
+/* Градиентная линия — часть хедера (не отдельный блок). На главной не показываем. */
+.public-header:not(.public-header--hero)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(243, 241, 236, 0) 0%,
+    var(--premium-slant-a) 28%,
+    var(--premium-slant-b) 52%,
+    var(--premium-slant-c) 78%,
+    rgba(243, 241, 236, 0) 100%
+  );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* Шапка на главной: как в герое — без «белой плашки», поверх диагонали */
+.public-header--hero {
+  position: relative;
+  background: transparent;
+  z-index: 2;
+}
+
+.public-header__logo {
+  font-weight: 800;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--premium-ink);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.public-header__logo:hover {
+  opacity: 0.85;
+}
+
+.public-header__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  margin-left: auto;
+  margin-right: 1rem;
+}
+
+.public-header__link {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--premium-ink-muted);
+  text-decoration: none;
+  padding-bottom: 0.2rem;
+  border-bottom: 2px solid transparent;
+}
+
+.public-header__link:hover {
+  color: var(--premium-ink);
+}
+
+.public-header__link--active {
+  color: var(--premium-ink);
+  border-bottom-color: var(--premium-ink);
+}
+
+.public-header__link--on-dark {
+  color: #fff;
+}
+
+.public-header__link--on-dark:hover {
+  color: #fff;
+  opacity: 0.92;
+}
+
+.public-header__link--active-on-dark {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+@media (max-width: 900px) {
+  .public-header--hero .public-header__nav {
+    display: none;
+  }
+}
+
+.public-header__auth {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.public-header__login {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--premium-ink-muted);
+  text-decoration: none;
+}
+
+.public-header__login:hover {
+  color: var(--premium-ink);
+}
+
+.public-header__login--on-dark {
+  color: #fff;
+}
+
+.public-header__login--on-dark:hover {
+  color: #fff;
+  opacity: 0.9;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.public-header__register {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.15rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--premium-ink);
+  background: linear-gradient(180deg, #ffffff 0%, #e8ecf2 100%);
+  border: 1px solid rgba(15, 20, 25, 0.08);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 22px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.public-header__register:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* На герое кнопка регистрации совпадает с hero__btn--primary */
+.public-header__register--hero {
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.page-main {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem clamp(1.25rem, 4vw, 4rem) 4rem;
+}
+
+.page-main h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.65rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--premium-ink);
+}
+
+.page-main p.lead {
+  margin: 0 0 1.5rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--premium-ink-muted);
+}
+
+.page-placeholder {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(15, 20, 25, 0.06);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--premium-ink-muted);
+  box-shadow: 0 4px 24px rgba(15, 20, 25, 0.04);
+}
+
+.public-footer {
+  margin-top: auto;
+  padding: 2rem clamp(1.25rem, 4vw, 4rem);
+  background: #141821;
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 0.85rem;
+}
+
+.public-footer__grid {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .public-footer__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.public-footer a {
+  color: rgba(226, 232, 240, 0.9);
+  text-decoration: none;
+}
+
+.public-footer a:hover {
+  text-decoration: underline;
+}
+
+.public-footer__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.public-footer ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-footer li + li {
+  margin-top: 0.5rem;
+}
+
+/* Кнопки на внутренних страницах (не тянем home.css) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8rem;
+  padding: 0.75rem 1.5rem;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn--primary {
+  color: var(--premium-ink);
+  background: linear-gradient(180deg, #ffffff 0%, #e8ecf2 100%);
+  border-color: rgba(15, 20, 25, 0.08);
+  box-shadow:
+    0 8px 22px rgba(15, 23, 42, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.btn--primary:hover {
+  transform: translateY(-1px);
+}
+
+.btn--ghost {
+  color: var(--premium-ink);
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(15, 20, 25, 0.15);
+}
+
+.btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
