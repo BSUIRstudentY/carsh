@@ -7,6 +7,7 @@ interface ActiveBooking {
   id: number
   vehicleId: number
   vehicleTitle: string
+  vehicleImageUrl: string | null
   startAt: string | null
 }
 
@@ -65,15 +66,20 @@ export function ActiveRideWidget() {
       <div className="ride-widget__header">
         <div className="ride-widget__header-left">
           <span className="ride-widget__dot" />
-          <span className="ride-widget__title">Поездка</span>
+          <span className="ride-widget__title">В поездке</span>
         </div>
         <button className="ride-widget__minimize" onClick={() => setMinimized(true)} title="Свернуть">−</button>
       </div>
       <div className="ride-widget__body">
-        <div className="ride-widget__car">{booking.vehicleTitle}</div>
-        <div className="ride-widget__row">
-          <span className="ride-widget__time">{minutes}:{String(seconds).padStart(2, '0')}</span>
-          <span className="ride-widget__cost">{cost} BYN</span>
+        {booking.vehicleImageUrl && (
+          <img className="ride-widget__car-img" src={booking.vehicleImageUrl} alt={booking.vehicleTitle} />
+        )}
+        <div className="ride-widget__info">
+          <div className="ride-widget__car">{booking.vehicleTitle}</div>
+          <div className="ride-widget__row">
+            <span className="ride-widget__time">{minutes}:{String(seconds).padStart(2, '0')}</span>
+            <span className="ride-widget__cost">{cost} BYN</span>
+          </div>
         </div>
       </div>
       <Link to="/map" className="ride-widget__link">Открыть карту →</Link>

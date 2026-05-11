@@ -3,13 +3,14 @@
   bottom: 1.5rem;
   right: 1.5rem;
   z-index: 10000;
-  width: 260px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(5, 150, 105, 0.2);
+  width: 280px;
+  background: #1e293b;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
   overflow: hidden;
   font-family: Montserrat, system-ui, sans-serif;
   animation: slide-up 0.3s ease;
+  color: #fff;
 }
 
 @keyframes slide-up {
@@ -28,26 +29,27 @@
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
+  color: #fff;
 }
 
 .ride-widget__mini-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #059669;
-  animation: pulse-dot 1.5s ease infinite;
+  background: #818cf8;
+  animation: widget-pulse 1.5s ease infinite;
 }
 
 .ride-widget__mini-cost {
-  color: #059669;
+  color: #a5b4fc;
 }
 
 .ride-widget__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0.85rem;
-  background: linear-gradient(135deg, #059669, #047857);
+  padding: 0.6rem 0.9rem;
+  background: linear-gradient(135deg, #312e81, #4338ca);
 }
 
 .ride-widget__header-left {
@@ -60,25 +62,25 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #fff;
-  animation: pulse-dot 1.5s ease infinite;
+  background: #a5b4fc;
+  animation: widget-pulse 1.5s ease infinite;
 }
 
-@keyframes pulse-dot {
+@keyframes widget-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.3); }
 }
 
 .ride-widget__title {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #fff;
+  color: #e0e7ff;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .ride-widget__minimize {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.12);
   border: none;
   color: #fff;
   width: 22px;
@@ -92,48 +94,74 @@
   justify-content: center;
 }
 
+.ride-widget__minimize:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .ride-widget__body {
-  padding: 0.75rem 0.85rem;
+  padding: 0.85rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ride-widget__car-img {
+  width: 72px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.ride-widget__info {
+  flex: 1;
+  min-width: 0;
 }
 
 .ride-widget__car {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 0.4rem;
+  color: #f1f5f9;
+  margin-bottom: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ride-widget__row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 0.5rem;
 }
 
 .ride-widget__time {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 800;
-  color: #1e293b;
+  color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
 .ride-widget__cost {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
-  color: #059669;
+  color: #a5b4fc;
 }
 
 .ride-widget__link {
   display: block;
   text-align: center;
   padding: 0.55rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #2563eb;
+  color: #a5b4fc;
   text-decoration: none;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   transition: background 0.15s;
 }
 
 .ride-widget__link:hover {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.05);
+  color: #c7d2fe;
 }
