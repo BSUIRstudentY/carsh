@@ -37,7 +37,7 @@ export function ActiveRideOverlay({ booking, route, pricePerMinute, onEnd }: Pro
 
   const minutes = Math.floor(elapsed / 60)
   const seconds = elapsed % 60
-  const currentCost = (elapsed / 60) * pricePerMinute
+  const currentCost = minutes * pricePerMinute
 
   const routePositions = useMemo(
     () => route?.points.map(p => [p.lat, p.lon] as [number, number]) ?? [],
