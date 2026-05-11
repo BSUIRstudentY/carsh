@@ -1,5 +1,6 @@
 package com.carsharing.api.web;
 
+import com.carsharing.api.config.TelemetryProperties;
 import com.carsharing.api.dto.telemetry.RouteResponse;
 import com.carsharing.api.dto.telemetry.SimulateBatchRequest;
 import com.carsharing.api.dto.telemetry.TelemetrySimulateRequest;
@@ -11,9 +12,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.Map;
@@ -24,17 +27,26 @@ import java.util.Map;
 public class TelemetryController {
 
     private final TelemetryService telemetryService;
+    private final TelemetryProperties telemetryProperties;
 
     @PostMapping("/simulate")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Map<String, String> simulate(@Valid @RequestBody TelemetrySimulateRequest request) {
+    public Map<String, String> simulate(
+            @RequestHeader(value = "X-Telemetry-Key", required = false) String apiKey,
+            @Valid @RequestBody TelemetrySimulateRequest request
+    ) {
+        validateApiKey(apiKey);
         telemetryService.sendTelemetryPoint(request);
         return Map.of("status", "sent");
     }
 
     @PostMapping("/simulate/batch")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Map<String, Object> simulateBatch(@Valid @RequestBody SimulateBatchRequest request) {
+    public Map<String, Object> simulateBatch(
+            @RequestHeader(value = "X-Telemetry-Key", required = false) String apiKey,
+            @Valid @RequestBody SimulateBatchRequest request
+    ) {
+        validateApiKey(apiKey);
         int count = 0;
         Instant baseTs = Instant.now();
         for (SimulateBatchRequest.PointInput p : request.points()) {
@@ -56,5 +68,12 @@ public class TelemetryController {
     @GetMapping("/vehicle/{vehicleId}/route")
     public RouteResponse vehicleLiveRoute(@PathVariable Long vehicleId) {
         return telemetryService.getLiveRoute(vehicleId);
+    }
+
+    private void validateApiKey(String apiKey) {
+        String expected = telemetryProperties.simulateApiKey();
+        if (apiKey != null && apiKey.equals(expected)) return;
+        if (apiKey == null && expected.startsWith("dev-")) return;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid telemetry API key");
     }
 }

@@ -236,7 +236,10 @@ function TelemetrySimulator({ bookings, onRefresh }: { bookings: BookingItem[]; 
     try {
       const res = await fetch('/api/v1/telemetry/simulate/batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telemetry-Key': 'dev-telemetry-key-change-in-prod',
+        },
         body: JSON.stringify({
           vehicleId: Number(vehicleId),
           bookingId: bookingId ? Number(bookingId) : null,
