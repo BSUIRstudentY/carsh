@@ -4,9 +4,9 @@
   right: 1.5rem;
   z-index: 10000;
   width: 280px;
-  background: #1e293b;
+  background: var(--premium-slant-a, #2c3140);
   border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 40px rgba(15, 20, 25, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04);
   overflow: hidden;
   font-family: Montserrat, system-ui, sans-serif;
   animation: slide-up 0.3s ease;
@@ -36,12 +36,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #818cf8;
+  background: var(--premium-metal, #cbd5e1);
   animation: widget-pulse 1.5s ease infinite;
 }
 
 .ride-widget__mini-cost {
-  color: #a5b4fc;
+  color: var(--premium-metal, #cbd5e1);
 }
 
 .ride-widget__header {
@@ -49,7 +49,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 0.9rem;
-  background: linear-gradient(135deg, #312e81, #4338ca);
+  background: var(--premium-slant-b, #141821);
 }
 
 .ride-widget__header-left {
@@ -62,7 +62,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #a5b4fc;
+  background: var(--premium-metal, #cbd5e1);
   animation: widget-pulse 1.5s ease infinite;
 }
 
@@ -74,15 +74,15 @@
 .ride-widget__title {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #e0e7ff;
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .ride-widget__minimize {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.7);
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -95,7 +95,7 @@
 }
 
 .ride-widget__minimize:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .ride-widget__body {
@@ -110,7 +110,7 @@
   height: 54px;
   object-fit: contain;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
 }
 
@@ -122,7 +122,7 @@
 .ride-widget__car {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--premium-bg, #f3f1ec);
   margin-bottom: 0.35rem;
   white-space: nowrap;
   overflow: hidden;
@@ -146,7 +146,7 @@
 .ride-widget__cost {
   font-size: 1rem;
   font-weight: 800;
-  color: #a5b4fc;
+  color: var(--premium-metal, #cbd5e1);
 }
 
 .ride-widget__link {
@@ -155,13 +155,13 @@
   padding: 0.55rem;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #a5b4fc;
+  color: var(--premium-metal, #cbd5e1);
   text-decoration: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 0.15s;
 }
 
 .ride-widget__link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #c7d2fe;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
 }
