@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Polyline, Marker } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
+import { RouteMap } from '../../components/RouteMap'
 
 interface ActiveBooking {
   id: number
@@ -39,8 +38,8 @@ export function ActiveRideOverlay({ booking, route, pricePerMinute, onEnd }: Pro
   const seconds = elapsed % 60
   const currentCost = minutes * pricePerMinute
 
-  const routePositions = useMemo(
-    () => route?.points.map(p => [p.lat, p.lon] as [number, number]) ?? [],
+  const routePoints = useMemo(
+    () => route?.points.map(p => ({ lat: p.lat, lon: p.lon })) ?? [],
     [route],
   )
 
@@ -77,21 +76,9 @@ export function ActiveRideOverlay({ booking, route, pricePerMinute, onEnd }: Pro
         </div>
       </div>
 
-      {routePositions.length > 1 && (
+      {routePoints.length > 1 && (
         <div className="ride-overlay__map">
-          <MapContainer
-            center={routePositions[routePositions.length - 1]}
-            zoom={14}
-            scrollWheelZoom={false}
-            dragging={false}
-            zoomControl={false}
-            style={{ height: '180px', width: '100%', borderRadius: '10px' }}
-          >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Polyline positions={routePositions} color="#2563eb" weight={3} />
-            <Marker position={routePositions[0]} />
-            <Marker position={routePositions[routePositions.length - 1]} />
-          </MapContainer>
+          <RouteMap points={routePoints} isActive={true} height="180px" interactive={false} />
         </div>
       )}
 

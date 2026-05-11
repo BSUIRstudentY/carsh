@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { AdminRouteCreator } from './AdminRouteCreator'
 import './admin.css'
 
 interface UserItem {
@@ -128,7 +129,14 @@ export function AdminPage() {
             </tbody>
           </table>
         )}
-        {tab === 'telemetry' && <TelemetrySimulator bookings={bookings} onRefresh={loadBookings} />}
+        {tab === 'telemetry' && (
+          <>
+            <AdminRouteCreator bookings={bookings} onRefresh={loadBookings} />
+            <div style={{ marginTop: '2rem' }}>
+              <TelemetrySimulator bookings={bookings} onRefresh={loadBookings} />
+            </div>
+          </>
+        )}
       </main>
     </div>
   )

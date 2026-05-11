@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet'
 import { useAuth } from '../../contexts/AuthContext'
 import { PublicPageShell } from '../../layouts/PublicPageShell'
+import { RouteMap } from '../../components/RouteMap'
 import './dashboard.css'
 
 interface Booking {
@@ -41,7 +41,9 @@ export function DashboardPage() {
 
   if (!isAuthenticated) return null
 
-  const routePositions = route?.points.map(p => [p.lat, p.lon] as [number, number]) || []
+  const routePoints = route?.points.map(p => ({ lat: p.lat, lon: p.lon })) ?? []
+  const selectedBooking = bookings.find(b => b.id === selectedBookingId)
+  const isRouteActive = selectedBooking?.status === 'ACTIVE' || selectedBooking?.status === 'RESERVED'
 
   return (
     <PublicPageShell>
@@ -61,7 +63,7 @@ export function DashboardPage() {
           Для бронирования перейдите на <Link to="/map">карту</Link> и нажмите на маркер автомобиля.
         </p>
 
-        {route && routePositions.length > 0 && (
+        {route && routePoints.length > 0 && (
           <section className="route-section">
             <h2>Маршрут поездки #{selectedBookingId}</h2>
             <div className="route-stats">
@@ -72,20 +74,11 @@ export function DashboardPage() {
               {route.endedAt && <span>Конец: {new Date(route.endedAt).toLocaleString('ru')}</span>}
             </div>
             <div className="route-map">
-              <MapContainer
-                center={routePositions[0]}
-                zoom={14}
-                style={{ height: '400px', width: '100%', borderRadius: '12px' }}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <Polyline positions={routePositions} color="#2563eb" weight={4} />
-                <Marker position={routePositions[0]}><Popup>Старт</Popup></Marker>
-                <Marker position={routePositions[routePositions.length - 1]}><Popup>Финиш</Popup></Marker>
-              </MapContainer>
+              <RouteMap points={routePoints} isActive={isRouteActive} />
             </div>
           </section>
         )}
-        {route && routePositions.length === 0 && selectedBookingId && (
+        {route && routePoints.length === 0 && selectedBookingId && (
           <div style={{ padding: '1rem', background: '#fef3c7', borderRadius: '8px', marginBottom: '1.5rem', color: '#92400e' }}>
             Нет GPS-данных для этой поездки. Телеметрия не была записана.
           </div>

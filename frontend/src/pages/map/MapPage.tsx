@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CircleMarker, MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PublicPageShell } from '../../layouts/PublicPageShell'
@@ -341,9 +341,22 @@ export function MapPage() {
               )}
               {liveRoutePositions.length > 0 && (
                 <>
-                  <Marker position={liveRoutePositions[0]} />
+                  <Marker position={liveRoutePositions[0]}>
+                    <Popup>Старт</Popup>
+                  </Marker>
                   {liveRoutePositions.length > 1 && (
-                    <Marker position={liveRoutePositions[liveRoutePositions.length - 1]} />
+                    <CircleMarker
+                      center={liveRoutePositions[liveRoutePositions.length - 1]}
+                      radius={10}
+                      pathOptions={{
+                        color: '#1e293b',
+                        fillColor: '#3b82f6',
+                        fillOpacity: 1,
+                        weight: 3,
+                      }}
+                    >
+                      <Popup>Текущее положение</Popup>
+                    </CircleMarker>
                   )}
                 </>
               )}
