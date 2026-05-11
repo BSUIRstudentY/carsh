@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PublicPageShell } from '../../layouts/PublicPageShell'
+import { useAuth } from '../../contexts/AuthContext'
 import { VehicleBookingPanel } from './VehicleBookingPanel'
+import { ActiveRideOverlay } from './ActiveRideOverlay'
 import type { MapVehicleFull } from './VehicleBookingPanel'
 import type { TariffPublic } from './mapTariffs'
 import './map.css'
@@ -30,6 +32,16 @@ const CLASS_OPTIONS: { value: ClassFilter; label: string }[] = [
   { value: 'BUSINESS', label: 'Бизнес' },
 ]
 
+interface ActiveBooking {
+  id: number
+  vehicleId: number
+  vehicleTitle: string
+  status: string
+  startAt: string | null
+}
+
+interface RouteData { points: { lat: number; lon: number; ts: string; speedKph: number }[]; distanceKm: number; avgSpeedKph: number; pointCount: number }
+
 function FitBounds({ points, pause }: { points: [number, number][]; pause: boolean }) {
   const map = useMap()
   useEffect(() => {
@@ -47,7 +59,6 @@ function FitBounds({ points, pause }: { points: [number, number][]; pause: boole
   return null
 }
 
-/** Подсветка выбранной точки (открыта карточка). */
 function FlyToSelected({
   position,
   enabled,
@@ -64,6 +75,7 @@ function FlyToSelected({
 }
 
 export function MapPage() {
+  const { isAuthenticated, accessToken } = useAuth()
   const [cities, setCities] = useState<CityItem[]>([])
   const [cityId, setCityId] = useState<string>('')
   const [classFilter, setClassFilter] = useState<ClassFilter>('')
@@ -75,6 +87,8 @@ export function MapPage() {
   const [loadingTariffs, setLoadingTariffs] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null)
+  const [activeBooking, setActiveBooking] = useState<ActiveBooking | null>(null)
+  const [liveRoute, setLiveRoute] = useState<RouteData | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -92,9 +106,7 @@ export function MapPage() {
       }
     }
     void loadCities()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -113,9 +125,7 @@ export function MapPage() {
       }
     }
     void loadTariffs()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   const loadMarkers = useCallback(async () => {
@@ -138,6 +148,41 @@ export function MapPage() {
   useEffect(() => {
     void loadMarkers()
   }, [loadMarkers])
+
+  const loadActiveBooking = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) { setActiveBooking(null); return }
+    try {
+      const res = await fetch('/api/v1/bookings/active', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) {
+        setActiveBooking(await res.json())
+      } else {
+        setActiveBooking(null)
+      }
+    } catch {
+      setActiveBooking(null)
+    }
+  }, [isAuthenticated, accessToken])
+
+  useEffect(() => { void loadActiveBooking() }, [loadActiveBooking])
+
+  const loadLiveRoute = useCallback(async () => {
+    if (!activeBooking || !accessToken) { setLiveRoute(null); return }
+    try {
+      const res = await fetch(`/api/v1/bookings/${activeBooking.id}/route`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) setLiveRoute(await res.json())
+    } catch { /* ignore */ }
+  }, [activeBooking, accessToken])
+
+  useEffect(() => {
+    void loadLiveRoute()
+    if (!activeBooking) return
+    const interval = setInterval(loadLiveRoute, 5000)
+    return () => clearInterval(interval)
+  }, [loadLiveRoute, activeBooking])
 
   useEffect(() => {
     setVehicleFilterId('')
@@ -191,84 +236,88 @@ export function MapPage() {
     setSelectedVehicleId(v.id)
   }
 
-  /** Только фильтр карты; карточка открывается по клику на маркер. */
   const handleVehicleSelect = (id: string) => {
     setVehicleFilterId(id)
     if (id === '') setSelectedVehicleId(null)
   }
+
+  const handleBooked = () => {
+    loadActiveBooking()
+    loadMarkers()
+  }
+
+  const handleEndRide = async () => {
+    if (!activeBooking || !accessToken) return
+    try {
+      const res = await fetch(`/api/v1/bookings/${activeBooking.id}/end`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) {
+        setActiveBooking(null)
+        setLiveRoute(null)
+        loadMarkers()
+      }
+    } catch { /* ignore */ }
+  }
+
+  const liveRoutePositions = useMemo(
+    () => liveRoute?.points.map(p => [p.lat, p.lon] as [number, number]) ?? [],
+    [liveRoute],
+  )
+
+  const activeVehiclePricePerMin = useMemo(() => {
+    if (!activeBooking) return 0.24
+    const v = vehicles.find(v => v.id === activeBooking.vehicleId)
+    return v?.pricePerMinute ?? 0.24
+  }, [activeBooking, vehicles])
 
   return (
     <PublicPageShell>
       <div className="page-main page-main--map">
         <h1>Карта автомобилей</h1>
         <p className="lead">
-          Фильтруйте по классу или выберите конкретную машину. Нажмите на маркер — откроется карточка с тарифами и
-          бронированием.
+          Нажмите на маркер автомобиля — откроется карточка с тарифами и бронированием.
         </p>
+
+        {activeBooking && (
+          <ActiveRideOverlay
+            booking={activeBooking}
+            route={liveRoute}
+            pricePerMinute={activeVehiclePricePerMin}
+            onEnd={handleEndRide}
+          />
+        )}
 
         <div className="map-page__toolbar map-page__toolbar--grid">
           <label htmlFor="map-city">
             Город
-            <select
-              id="map-city"
-              value={cityId}
-              onChange={(e) => setCityId(e.target.value)}
-              disabled={loadingCities}
-              aria-label="Фильтр по городу"
-            >
+            <select id="map-city" value={cityId} onChange={(e) => setCityId(e.target.value)} disabled={loadingCities} aria-label="Фильтр по городу">
               <option value="">Все города</option>
-              {cities.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.name}
-                </option>
-              ))}
+              {cities.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
             </select>
           </label>
 
           <label htmlFor="map-class">
             Класс
-            <select
-              id="map-class"
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value as ClassFilter)}
-              disabled={loadingVehicles}
-              aria-label="Фильтр по классу автомобиля"
-            >
-              {CLASS_OPTIONS.map((o) => (
-                <option key={o.value === '' ? 'all' : o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
+            <select id="map-class" value={classFilter} onChange={(e) => setClassFilter(e.target.value as ClassFilter)} disabled={loadingVehicles} aria-label="Фильтр по классу автомобиля">
+              {CLASS_OPTIONS.map((o) => <option key={o.value === '' ? 'all' : o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>
 
           <label htmlFor="map-vehicle">
             Машина
-            <select
-              id="map-vehicle"
-              value={vehicleFilterId}
-              onChange={(e) => handleVehicleSelect(e.target.value)}
-              disabled={loadingVehicles}
-              aria-label="Показать только выбранный автомобиль"
-            >
+            <select id="map-vehicle" value={vehicleFilterId} onChange={(e) => handleVehicleSelect(e.target.value)} disabled={loadingVehicles} aria-label="Показать только выбранный автомобиль">
               <option value="">Все на карте</option>
-              {vehiclesForDropdown.map((v) => (
-                <option key={v.id} value={String(v.id)}>
-                  {v.displayTitle} ({v.vehicleClassTitle})
-                </option>
-              ))}
+              {vehiclesForDropdown.map((v) => <option key={v.id} value={String(v.id)}>{v.displayTitle} ({v.vehicleClassTitle})</option>)}
             </select>
           </label>
         </div>
 
         {error && <div className="fleet-error">{error}</div>}
-
         {showLoading && <div className="fleet-loading">Загрузка карты…</div>}
-
         {!showLoading && !error && filteredForMap.length === 0 && (
-          <div className="map-page__empty-banner">
-            Нет автомобилей для выбранных фильтров или нет координат.
-          </div>
+          <div className="map-page__empty-banner">Нет автомобилей для выбранных фильтров или нет координат.</div>
         )}
 
         {!showLoading && (
@@ -286,23 +335,48 @@ export function MapPage() {
               />
               <FitBounds points={points} pause={selectedVehicleId != null} />
               <FlyToSelected position={flyPosition} enabled={selectedVehicleId != null} />
+
+              {liveRoutePositions.length > 1 && (
+                <Polyline positions={liveRoutePositions} color="#2563eb" weight={4} opacity={0.8} />
+              )}
+              {liveRoutePositions.length > 0 && (
+                <>
+                  <Marker position={liveRoutePositions[0]}>
+                    <Popup>Старт</Popup>
+                  </Marker>
+                  {liveRoutePositions.length > 1 && (
+                    <CircleMarker
+                      center={liveRoutePositions[liveRoutePositions.length - 1]}
+                      radius={10}
+                      pathOptions={{
+                        color: '#1e293b',
+                        fillColor: '#3b82f6',
+                        fillOpacity: 1,
+                        weight: 3,
+                      }}
+                    >
+                      <Popup>Текущее положение</Popup>
+                    </CircleMarker>
+                  )}
+                </>
+              )}
+
               {filteredForMap.map((v) => {
                 if (v.latitude == null || v.longitude == null) return null
                 const isActive = selectedVehicleId === v.id
+                const isRented = activeBooking?.vehicleId === v.id
                 return (
                   <CircleMarker
                     key={v.id}
                     center={[v.latitude, v.longitude]}
-                    radius={isActive ? 11 : 9}
+                    radius={isActive ? 12 : isRented ? 11 : 8}
                     pathOptions={{
-                      color: isActive ? '#c2410c' : '#3730a3',
-                      fillColor: isActive ? '#fb923c' : '#6366f1',
-                      fillOpacity: isActive ? 0.95 : 0.88,
-                      weight: isActive ? 3 : 2,
+                      color: isRented ? '#059669' : isActive ? '#c2410c' : '#3730a3',
+                      fillColor: isRented ? '#34d399' : isActive ? '#fb923c' : '#818cf8',
+                      fillOpacity: 0.9,
+                      weight: isActive || isRented ? 3 : 2,
                     }}
-                    eventHandlers={{
-                      click: () => handleMarkerClick(v),
-                    }}
+                    eventHandlers={{ click: () => handleMarkerClick(v) }}
                   />
                 )
               })}
@@ -316,6 +390,7 @@ export function MapPage() {
             vehicle={selectedVehicle}
             tariffs={tariffs}
             onClose={() => setSelectedVehicleId(null)}
+            onBooked={handleBooked}
           />
         )}
       </div>

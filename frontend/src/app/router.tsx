@@ -8,6 +8,9 @@ import { FleetPage } from '../pages/fleet/FleetPage'
 import { HomePage } from '../pages/home/HomePage'
 import { MapPage } from '../pages/map/MapPage'
 import { TariffsPage } from '../pages/tariffs/TariffsPage'
+import { AdminPage } from '../pages/admin/AdminPage'
+import { DashboardPage } from '../pages/dashboard/DashboardPage'
+import { ProfilePage } from '../pages/profile/ProfilePage'
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +25,12 @@ export const router = createBrowserRouter([
       { path: 'contact', element: <ContactPage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'register', element: <RegisterPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'profile', element: <ProfilePage /> },
     ],
+  },
+  {
+    path: '/admin',
+    element: <AdminPage />,
   },
 ])

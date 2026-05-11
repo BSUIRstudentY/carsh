@@ -1,12 +1,16 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import './public-layout.css'
 
 type PublicHeaderProps = {
-  /** Прозрачная шапка поверх диагонали героя (белые ссылки справа, логотип тёмный слева). */
   variant?: 'default' | 'hero'
 }
 
 export function PublicHeader({ variant = 'default' }: PublicHeaderProps) {
+  const { isAuthenticated, user } = useAuth()
+  const { dark, toggle } = useTheme()
+
   const rootClass =
     variant === 'hero'
       ? 'public-header public-header--hero'
@@ -59,12 +63,37 @@ export function PublicHeader({ variant = 'default' }: PublicHeaderProps) {
         </NavLink>
       </nav>
       <div className="public-header__auth">
-        <NavLink to="/login" className={loginClass}>
-          Войти
-        </NavLink>
-        <NavLink to="/register" className={registerClass}>
-          Регистрация
-        </NavLink>
+        <button
+          onClick={toggle}
+          className={variant === 'hero' ? 'public-header__theme-btn public-header__theme-btn--hero' : 'public-header__theme-btn'}
+          title={dark ? 'Светлая тема' : 'Тёмная тема'}
+        >
+          {dark ? '☀️' : '🌙'}
+        </button>
+        {isAuthenticated ? (
+          <>
+            <NavLink to="/dashboard" className={loginClass}>
+              Кабинет
+            </NavLink>
+            <NavLink to="/profile" className={loginClass}>
+              {user?.firstName || 'Профиль'}
+            </NavLink>
+            {user?.role === 'ADMIN' && (
+              <NavLink to="/admin" className={registerClass}>
+                Админ
+              </NavLink>
+            )}
+          </>
+        ) : (
+          <>
+            <NavLink to="/login" className={loginClass}>
+              Войти
+            </NavLink>
+            <NavLink to="/register" className={registerClass}>
+              Регистрация
+            </NavLink>
+          </>
+        )}
       </div>
     </header>
   )

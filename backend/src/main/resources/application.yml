@@ -11,13 +11,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,kafka
+  metrics:
+    tags:
+      application: carsharing-api
 
 app:
   jwt:
     secret: ${JWT_SECRET:dev-secret-min-32-bytes-long-change-in-production-xx}
     access-token-validity: PT15M
     refresh-token-validity: P7D
+  telemetry:
+    rate-limit-seconds: 2
+    ttl-days: 90
+    simulate-api-key: ${TELEMETRY_API_KEY:dev-telemetry-key-change-in-prod}
 
 ---
 # Локальная разработка: H2 in-memory. Консоль H2 только в браузере приложения (тот же JVM, что и Spring).
@@ -49,6 +56,22 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/carsharing
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: carsharing-telemetry
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 100
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      type: batch
 
 ---
 spring:

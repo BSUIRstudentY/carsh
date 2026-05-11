@@ -1,0 +1,3 @@
+ALTER TABLE contact_requests ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'NEW';
+ALTER TABLE contact_requests ADD COLUMN admin_reply VARCHAR(4000);
+ALTER TABLE contact_requests ADD COLUMN replied_at TIMESTAMP WITH TIME ZONE;

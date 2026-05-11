@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import type { TariffPublic } from './mapTariffs'
 import { formatMoney, num, tariffsForVehicleClass } from './mapTariffs'
 
@@ -22,6 +23,7 @@ type Props = {
   vehicle: MapVehicleFull
   tariffs: TariffPublic[]
   onClose: () => void
+  onBooked?: () => void
 }
 
 function PanelVisual({ url }: { url: string | null }) {
@@ -44,7 +46,12 @@ function PanelVisual({ url }: { url: string | null }) {
   )
 }
 
-export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
+export function VehicleBookingPanel({ vehicle, tariffs, onClose, onBooked }: Props) {
+  const { isAuthenticated, accessToken } = useAuth()
+  const navigate = useNavigate()
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+
   const scoped = useMemo(
     () => tariffsForVehicleClass(vehicle.vehicleClassCode, tariffs),
     [tariffs, vehicle.vehicleClassCode],
@@ -76,31 +83,49 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
       if (prev != null && bulkAll.some((t) => t.id === prev)) return prev
       return bulkAll[0]?.id ?? null
     })
-  }, [vehicle.id, bulkKey])
+  }, [vehicle.id, bulkKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedBulk = bulkAll.find((t) => t.id === bulkId) ?? bulkAll[0] ?? null
 
-  const summary = (): string => {
-    if (mode === 'PER_TIME' && perTime) {
-      const m = num(perTime.pricePerMinute)
-      return `Поминутно: ${m != null ? `${m.toFixed(2)} BYN / мин` : perTime.title}`
-    }
-    if (mode === 'PER_KM' && perKm) {
-      const k = num(perKm.pricePerKm)
-      return `За км: ${k != null ? `${k.toFixed(2)} BYN / км` : perKm.title}`
-    }
-    if (mode === 'BULK_TIME' && selectedBulk) {
-      const h = num(selectedBulk.bulkTimeHours)
-      const p = num(selectedBulk.bulkPackagePrice)
-      return `Пакет ${h != null ? `${h} ч` : '—'} за ${p != null ? `${p.toFixed(2)} BYN` : '—'}`
-    }
-    return 'Выберите тариф'
-  }
+  const [promoInput, setPromoInput] = useState('')
+  const [promoStatus, setPromoStatus] = useState('')
 
-  const handleBook = () => {
-    window.alert(
-      `Заявка на бронирование (демо):\n${vehicle.displayTitle}\n${summary()}\n\nВ продакшене здесь будет выбор оплаты и подтверждение.`,
-    )
+  const handleBook = async () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    setBookingLoading(true)
+    setBookingError('')
+    try {
+      const res = await fetch('/api/v1/bookings/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          vehicleId: vehicle.id,
+          tariffMode: mode,
+          promoCode: promoInput.trim() || null,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || data.error || 'Не удалось забронировать')
+      }
+      const booking = await res.json()
+      if (booking.discountPercent > 0) {
+        setPromoStatus(`Скидка ${booking.discountPercent}% применена!`)
+      }
+      onBooked?.()
+      onClose()
+    } catch (err: unknown) {
+      setBookingError(err instanceof Error ? err.message : 'Ошибка бронирования')
+    } finally {
+      setBookingLoading(false)
+    }
   }
 
   return (
@@ -234,15 +259,48 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
           {!perTime && !perKm && bulkAll.length === 0 && (
             <p className="map-panel__empty-tariff">Нет тарифов для этого класса в каталоге.</p>
           )}
+
+          {isAuthenticated && (
+            <div className="map-panel__block" style={{ marginTop: '0.75rem' }}>
+              <label style={{ display: 'grid', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b' }}>Промокод (если есть)</span>
+                <input
+                  value={promoInput}
+                  onChange={e => setPromoInput(e.target.value.toUpperCase())}
+                  placeholder="WELCOME"
+                  style={{ padding: '0.5rem 0.65rem', borderRadius: 8, border: '1px solid rgba(15,20,25,0.12)', background: 'rgba(255,255,255,0.9)', fontFamily: 'monospace', fontSize: '0.9rem', letterSpacing: '0.05em' }}
+                />
+              </label>
+              {promoStatus && <p style={{ color: '#059669', fontSize: '0.82rem', marginTop: '0.35rem', fontWeight: 600 }}>{promoStatus}</p>}
+            </div>
+          )}
+
+          {bookingError && (
+            <p style={{ color: '#dc2626', marginTop: '0.75rem', fontSize: '0.88rem', fontWeight: 600 }}>
+              {bookingError}
+            </p>
+          )}
         </div>
 
         <div className="map-panel__actions">
-          <button type="button" className="map-panel__btn map-panel__btn--primary" onClick={handleBook}>
-            Забронировать
-          </button>
-          <Link to="/login" className="map-panel__btn map-panel__btn--secondary">
-            Войти и начать
-          </Link>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="map-panel__btn map-panel__btn--primary"
+              onClick={handleBook}
+              disabled={bookingLoading}
+            >
+              {bookingLoading ? 'Бронирование...' : 'Забронировать'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="map-panel__btn map-panel__btn--primary"
+              onClick={() => navigate('/login')}
+            >
+              Войти и забронировать
+            </button>
+          )}
           <button type="button" className="map-panel__btn map-panel__btn--ghost" onClick={onClose}>
             Закрыть
           </button>

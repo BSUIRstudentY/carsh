@@ -1,21 +1,12 @@
 package com.carsharing.api.web;
 
-import com.carsharing.api.dto.auth.LoginRequest;
-import com.carsharing.api.dto.auth.RefreshRequest;
-import com.carsharing.api.dto.auth.RegisterRequest;
-import com.carsharing.api.dto.auth.TokenResponse;
-import com.carsharing.api.dto.auth.UserProfileResponse;
+import com.carsharing.api.dto.auth.*;
 import com.carsharing.api.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -27,7 +18,8 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request.email(), request.password(), request.phone());
+        return authService.register(request.email(), request.password(), request.phone(),
+                request.firstName(), request.lastName());
     }
 
     @PostMapping("/login")
@@ -50,5 +42,31 @@ public class AuthController {
     public UserProfileResponse me(Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         return authService.profile(userId);
+    }
+
+    @PutMapping("/me")
+    public UserProfileResponse updateProfile(
+            Authentication authentication,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        return authService.updateProfile(userId, request.firstName(), request.lastName(), request.phone());
+    }
+
+    @PostMapping("/me/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+        authService.changePassword(userId, request.currentPassword(), request.newPassword());
+    }
+
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAccount(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        authService.deleteAccount(userId);
     }
 }
