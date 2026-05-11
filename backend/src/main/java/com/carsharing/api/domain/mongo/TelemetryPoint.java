@@ -22,6 +22,8 @@ public class TelemetryPoint {
     private Long vehicleId;
     private Long bookingId;
     private Instant ts;
+    /** Set when the consumer persists the point; stabilizes ordering when several points share the same {@code ts}. */
+    private Instant receivedAt;
     private double lat;
     private double lon;
     private double speed;

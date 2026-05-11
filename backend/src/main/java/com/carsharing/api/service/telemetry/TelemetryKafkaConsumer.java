@@ -54,7 +54,8 @@ public class TelemetryKafkaConsumer {
                     continue;
                 }
 
-                if (isDuplicate(point.getVehicleId(), point.getLat(), point.getLon())) {
+                if (telemetryProperties.deduplicateIdenticalCoordinates()
+                        && isDuplicate(point.getVehicleId(), point.getLat(), point.getLon())) {
                     log.debug("Duplicate point for vehicle {}", point.getVehicleId());
                     continue;
                 }
@@ -121,6 +122,7 @@ public class TelemetryKafkaConsumer {
                     .bookingId(node.has("bookingId") && !node.get("bookingId").isNull()
                             ? node.get("bookingId").asLong() : null)
                     .ts(ts)
+                    .receivedAt(Instant.now())
                     .lat(lat)
                     .lon(lon)
                     .speed(speed)
@@ -133,6 +135,9 @@ public class TelemetryKafkaConsumer {
     }
 
     private boolean isRateLimited(long vehicleId, Instant ts) {
+        if (telemetryProperties.rateLimitSeconds() <= 0) {
+            return false;
+        }
         Instant last = lastPointTime.get(vehicleId);
         if (last == null) return false;
         long diffSeconds = ts.getEpochSecond() - last.getEpochSecond();

@@ -22,9 +22,10 @@ app:
     access-token-validity: PT15M
     refresh-token-validity: P7D
   telemetry:
-    rate-limit-seconds: 2
+    rate-limit-seconds: 0
     ttl-days: 90
     simulate-api-key: ${TELEMETRY_API_KEY:dev-telemetry-key-change-in-prod}
+    deduplicate-identical-coordinates: false
 
 ---
 # Локальная разработка: H2 in-memory. Консоль H2 только в браузере приложения (тот же JVM, что и Spring).
