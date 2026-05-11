@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { MapContainer, TileLayer, Polyline, Marker, Popup } from 'react-leaflet'
 import { useAuth } from '../../contexts/AuthContext'
 import { PublicPageShell } from '../../layouts/PublicPageShell'
@@ -16,7 +16,6 @@ export function DashboardPage() {
   const { isAuthenticated, accessToken, user, logout } = useAuth()
   const navigate = useNavigate()
   const [bookings, setBookings] = useState<Booking[]>([])
-  const [activeBooking, setActiveBooking] = useState<Booking | null>(null)
   const [route, setRoute] = useState<RouteData | null>(null)
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null)
 
@@ -31,26 +30,7 @@ export function DashboardPage() {
     if (r.ok) setBookings(await r.json())
   }, [accessToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadActive = useCallback(async () => {
-    const r = await fetch('/api/v1/bookings/active', { headers })
-    if (r.ok) setActiveBooking(await r.json())
-    else setActiveBooking(null)
-  }, [accessToken]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { loadBookings(); loadActive() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function startRide(vehicleId: number) {
-    const r = await fetch('/api/v1/bookings/start', {
-      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vehicleId }),
-    })
-    if (r.ok) { loadBookings(); loadActive() }
-  }
-
-  async function endRide(bookingId: number) {
-    const r = await fetch(`/api/v1/bookings/${bookingId}/end`, { method: 'POST', headers })
-    if (r.ok) { loadBookings(); loadActive(); setRoute(null) }
-  }
+  useEffect(() => { loadBookings() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadRoute(bookingId: number) {
     setSelectedBookingId(bookingId)
@@ -68,42 +48,28 @@ export function DashboardPage() {
       <div className="dashboard">
         <div className="dashboard-header">
           <h1>Личный кабинет</h1>
-          <div>
-            <span style={{ marginRight: '1rem' }}>{user?.email}</span>
-            {user?.role === 'ADMIN' && <button className="btn btn--ghost" onClick={() => navigate('/admin')} style={{ marginRight: '0.5rem' }}>Админ</button>}
-            <button className="btn btn--ghost" onClick={() => { logout(); navigate('/') }}>Выйти</button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{ color: '#64748b' }}>{user?.firstName || user?.email}</span>
+            {user?.role === 'ADMIN' && (
+              <button className="btn btn--ghost" onClick={() => navigate('/admin')} style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem' }}>Админ</button>
+            )}
+            <button className="btn btn--ghost" onClick={() => { logout(); navigate('/') }} style={{ padding: '0.3rem 0.7rem', fontSize: '0.8rem' }}>Выйти</button>
           </div>
         </div>
 
-        {activeBooking && (
-          <section className="active-ride">
-            <h2>Активная поездка</h2>
-            <div className="ride-card">
-              <p><strong>{activeBooking.vehicleTitle}</strong></p>
-              <p>Начало: {activeBooking.startAt ? new Date(activeBooking.startAt).toLocaleString('ru') : '—'}</p>
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button className="btn btn--primary" onClick={() => endRide(activeBooking.id)}>Завершить поездку</button>
-                <button className="btn btn--ghost" onClick={() => loadRoute(activeBooking.id)}>Показать маршрут (live)</button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {!activeBooking && (
-          <section>
-            <h2>Начать поездку</h2>
-            <p style={{ color: '#64748b', marginBottom: '0.5rem' }}>Введите ID автомобиля:</p>
-            <QuickBookForm onStart={startRide} />
-          </section>
-        )}
+        <p className="lead" style={{ marginBottom: '1.5rem' }}>
+          Для бронирования перейдите на <Link to="/map">карту</Link> и нажмите на маркер автомобиля.
+        </p>
 
         {route && routePositions.length > 0 && (
           <section className="route-section">
-            <h2>Маршрут (бронирование #{selectedBookingId})</h2>
+            <h2>Маршрут поездки #{selectedBookingId}</h2>
             <div className="route-stats">
-              <span>Дистанция: {route.distanceKm.toFixed(2)} км</span>
-              <span>Ср. скорость: {route.avgSpeedKph.toFixed(1)} км/ч</span>
-              <span>Точек: {route.pointCount}</span>
+              <span>Дистанция: <strong>{route.distanceKm.toFixed(2)} км</strong></span>
+              <span>Ср. скорость: <strong>{route.avgSpeedKph.toFixed(1)} км/ч</strong></span>
+              <span>Точек: <strong>{route.pointCount}</strong></span>
+              {route.startedAt && <span>Начало: {new Date(route.startedAt).toLocaleString('ru')}</span>}
+              {route.endedAt && <span>Конец: {new Date(route.endedAt).toLocaleString('ru')}</span>}
             </div>
             <div className="route-map">
               <MapContainer
@@ -119,20 +85,39 @@ export function DashboardPage() {
             </div>
           </section>
         )}
+        {route && routePositions.length === 0 && selectedBookingId && (
+          <div style={{ padding: '1rem', background: '#fef3c7', borderRadius: '8px', marginBottom: '1.5rem', color: '#92400e' }}>
+            Нет GPS-данных для этой поездки. Телеметрия не была записана.
+          </div>
+        )}
 
         <section>
           <h2>История поездок</h2>
-          {bookings.length === 0 ? <p style={{ color: '#64748b' }}>Нет поездок</p> : (
+          {bookings.length === 0 ? (
+            <p style={{ color: '#64748b' }}>У вас пока нет поездок. Перейдите на <Link to="/map">карту</Link>, чтобы забронировать автомобиль.</p>
+          ) : (
             <table className="admin-table">
-              <thead><tr><th>ID</th><th>Авто</th><th>Статус</th><th>Начало</th><th>Сумма</th><th>Маршрут</th></tr></thead>
+              <thead>
+                <tr><th>ID</th><th>Авто</th><th>Статус</th><th>Начало</th><th>Конец</th><th>Сумма</th><th>Маршрут</th></tr>
+              </thead>
               <tbody>
                 {bookings.map(b => (
                   <tr key={b.id}>
-                    <td>{b.id}</td><td>{b.vehicleTitle}</td>
-                    <td><span className={`badge badge--${b.status.toLowerCase()}`}>{b.status}</span></td>
+                    <td>{b.id}</td>
+                    <td>{b.vehicleTitle}</td>
+                    <td><span className={`badge badge--${b.status.toLowerCase()}`}>{b.status === 'ACTIVE' ? 'В поездке' : b.status === 'COMPLETED' ? 'Завершена' : b.status}</span></td>
                     <td>{b.startAt ? new Date(b.startAt).toLocaleString('ru') : '—'}</td>
+                    <td>{b.endAt ? new Date(b.endAt).toLocaleString('ru') : '—'}</td>
                     <td>{b.totalAmount ? `${b.totalAmount} ${b.currency}` : '—'}</td>
-                    <td><button className="btn btn--ghost" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => loadRoute(b.id)}>GPS</button></td>
+                    <td>
+                      <button
+                        className="btn btn--ghost"
+                        style={{ padding: '0.2rem 0.7rem', fontSize: '0.8rem' }}
+                        onClick={() => loadRoute(b.id)}
+                      >
+                        {b.status === 'ACTIVE' ? 'Live трек' : 'Маршрут'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -141,15 +126,5 @@ export function DashboardPage() {
         </section>
       </div>
     </PublicPageShell>
-  )
-}
-
-function QuickBookForm({ onStart }: { onStart: (id: number) => void }) {
-  const [vid, setVid] = useState('')
-  return (
-    <div style={{ display: 'flex', gap: '0.5rem' }}>
-      <input value={vid} onChange={e => setVid(e.target.value)} placeholder="Vehicle ID" style={{ padding: '0.5rem', borderRadius: 6, border: '1px solid #ddd', width: '6rem' }} />
-      <button className="btn btn--primary" onClick={() => vid && onStart(Number(vid))} style={{ minWidth: 'auto' }}>Начать</button>
-    </div>
   )
 }

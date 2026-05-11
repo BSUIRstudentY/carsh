@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import type { TariffPublic } from './mapTariffs'
 import { formatMoney, num, tariffsForVehicleClass } from './mapTariffs'
 
@@ -22,6 +23,7 @@ type Props = {
   vehicle: MapVehicleFull
   tariffs: TariffPublic[]
   onClose: () => void
+  onBooked?: () => void
 }
 
 function PanelVisual({ url }: { url: string | null }) {
@@ -44,7 +46,12 @@ function PanelVisual({ url }: { url: string | null }) {
   )
 }
 
-export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
+export function VehicleBookingPanel({ vehicle, tariffs, onClose, onBooked }: Props) {
+  const { isAuthenticated, accessToken } = useAuth()
+  const navigate = useNavigate()
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+
   const scoped = useMemo(
     () => tariffsForVehicleClass(vehicle.vehicleClassCode, tariffs),
     [tariffs, vehicle.vehicleClassCode],
@@ -76,31 +83,38 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
       if (prev != null && bulkAll.some((t) => t.id === prev)) return prev
       return bulkAll[0]?.id ?? null
     })
-  }, [vehicle.id, bulkKey])
+  }, [vehicle.id, bulkKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedBulk = bulkAll.find((t) => t.id === bulkId) ?? bulkAll[0] ?? null
 
-  const summary = (): string => {
-    if (mode === 'PER_TIME' && perTime) {
-      const m = num(perTime.pricePerMinute)
-      return `Поминутно: ${m != null ? `${m.toFixed(2)} BYN / мин` : perTime.title}`
+  const handleBook = async () => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
     }
-    if (mode === 'PER_KM' && perKm) {
-      const k = num(perKm.pricePerKm)
-      return `За км: ${k != null ? `${k.toFixed(2)} BYN / км` : perKm.title}`
-    }
-    if (mode === 'BULK_TIME' && selectedBulk) {
-      const h = num(selectedBulk.bulkTimeHours)
-      const p = num(selectedBulk.bulkPackagePrice)
-      return `Пакет ${h != null ? `${h} ч` : '—'} за ${p != null ? `${p.toFixed(2)} BYN` : '—'}`
-    }
-    return 'Выберите тариф'
-  }
 
-  const handleBook = () => {
-    window.alert(
-      `Заявка на бронирование (демо):\n${vehicle.displayTitle}\n${summary()}\n\nВ продакшене здесь будет выбор оплаты и подтверждение.`,
-    )
+    setBookingLoading(true)
+    setBookingError('')
+    try {
+      const res = await fetch('/api/v1/bookings/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ vehicleId: vehicle.id }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || data.error || 'Не удалось забронировать')
+      }
+      onBooked?.()
+      onClose()
+    } catch (err: unknown) {
+      setBookingError(err instanceof Error ? err.message : 'Ошибка бронирования')
+    } finally {
+      setBookingLoading(false)
+    }
   }
 
   return (
@@ -234,15 +248,33 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose }: Props) {
           {!perTime && !perKm && bulkAll.length === 0 && (
             <p className="map-panel__empty-tariff">Нет тарифов для этого класса в каталоге.</p>
           )}
+
+          {bookingError && (
+            <p style={{ color: '#dc2626', marginTop: '0.75rem', fontSize: '0.88rem', fontWeight: 600 }}>
+              {bookingError}
+            </p>
+          )}
         </div>
 
         <div className="map-panel__actions">
-          <button type="button" className="map-panel__btn map-panel__btn--primary" onClick={handleBook}>
-            Забронировать
-          </button>
-          <Link to="/login" className="map-panel__btn map-panel__btn--secondary">
-            Войти и начать
-          </Link>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="map-panel__btn map-panel__btn--primary"
+              onClick={handleBook}
+              disabled={bookingLoading}
+            >
+              {bookingLoading ? 'Бронирование...' : 'Забронировать'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="map-panel__btn map-panel__btn--primary"
+              onClick={() => navigate('/login')}
+            >
+              Войти и забронировать
+            </button>
+          )}
           <button type="button" className="map-panel__btn map-panel__btn--ghost" onClick={onClose}>
             Закрыть
           </button>
