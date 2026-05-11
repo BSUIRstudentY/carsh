@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +42,7 @@ public class TelemetryKafkaConsumer {
 
     @KafkaListener(topics = "vehicle-telemetry", groupId = "carsharing-telemetry")
     public void consumeBatch(List<String> messages) {
+        List<TelemetryPoint> parsed = new ArrayList<>();
         List<TelemetryPoint> toSave = new ArrayList<>();
         Map<Long, double[]> vehiclePositions = new ConcurrentHashMap<>();
 
@@ -48,6 +50,19 @@ public class TelemetryKafkaConsumer {
             try {
                 TelemetryPoint point = parseAndValidate(message);
                 if (point == null) continue;
+                parsed.add(point);
+            } catch (Exception e) {
+                sendToDlq(message, e);
+            }
+        }
+
+        parsed.sort(
+                Comparator.comparing(TelemetryPoint::getTs)
+                        .thenComparing(TelemetryPoint::getVehicleId)
+        );
+
+        for (TelemetryPoint point : parsed) {
+            try {
 
                 if (isRateLimited(point.getVehicleId(), point.getTs())) {
                     log.debug("Rate limited point for vehicle {}", point.getVehicleId());
@@ -60,14 +75,17 @@ public class TelemetryKafkaConsumer {
                 }
 
                 toSave.add(point);
-                vehiclePositions.put(point.getVehicleId(),
-                        new double[]{point.getLat(), point.getLon()});
+                vehiclePositions.put(
+                        point.getVehicleId(),
+                        new double[]{point.getLat(), point.getLon()}
+                );
                 lastPointTime.put(point.getVehicleId(), point.getTs());
-                lastPointCoords.put(point.getVehicleId(),
-                        new double[]{point.getLat(), point.getLon()});
-
+                lastPointCoords.put(
+                        point.getVehicleId(),
+                        new double[]{point.getLat(), point.getLon()}
+                );
             } catch (Exception e) {
-                sendToDlq(message, e);
+                sendToDlq(safeSerialize(point), e);
             }
         }
 
@@ -111,9 +129,7 @@ public class TelemetryKafkaConsumer {
             }
 
             if (ts.isAfter(Instant.now().plusSeconds(60))) {
-                log.warn("Future timestamp for vehicle {}", vehicleId);
-                sendToDlq(message, new IllegalArgumentException("Timestamp in the future"));
-                return null;
+                log.debug("Accepted future timestamp for vehicle {}: {}", vehicleId, ts);
             }
 
             return TelemetryPoint.builder()
@@ -192,6 +208,14 @@ public class TelemetryKafkaConsumer {
             log.warn("Sent message to DLQ: {}", e.getMessage());
         } catch (Exception dlqEx) {
             log.error("Failed to send to DLQ: {}", dlqEx.getMessage());
+        }
+    }
+
+    private String safeSerialize(TelemetryPoint point) {
+        try {
+            return objectMapper.writeValueAsString(point);
+        } catch (Exception ex) {
+            return "serialization_error";
         }
     }
 }
