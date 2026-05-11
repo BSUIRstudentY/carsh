@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css'
 import { PublicPageShell } from '../../layouts/PublicPageShell'
 import { useAuth } from '../../contexts/AuthContext'
 import { VehicleBookingPanel } from './VehicleBookingPanel'
+import { ActiveRideOverlay } from './ActiveRideOverlay'
 import type { MapVehicleFull } from './VehicleBookingPanel'
 import type { TariffPublic } from './mapTariffs'
 import './map.css'
@@ -39,7 +40,7 @@ interface ActiveBooking {
   startAt: string | null
 }
 
-interface RouteData { points: { lat: number; lon: number; ts: string; speedKph: number }[]; distanceKm: number; avgSpeedKph: number }
+interface RouteData { points: { lat: number; lon: number; ts: string; speedKph: number }[]; distanceKm: number; avgSpeedKph: number; pointCount: number }
 
 function FitBounds({ points, pause }: { points: [number, number][]; pause: boolean }) {
   const map = useMap()
@@ -265,6 +266,12 @@ export function MapPage() {
     [liveRoute],
   )
 
+  const activeVehiclePricePerMin = useMemo(() => {
+    if (!activeBooking) return 0.24
+    const v = vehicles.find(v => v.id === activeBooking.vehicleId)
+    return v?.pricePerMinute ?? 0.24
+  }, [activeBooking, vehicles])
+
   return (
     <PublicPageShell>
       <div className="page-main page-main--map">
@@ -274,25 +281,12 @@ export function MapPage() {
         </p>
 
         {activeBooking && (
-          <div className="map-active-ride">
-            <div className="map-active-ride__info">
-              <span className="map-active-ride__dot" />
-              <strong>Активная поездка:</strong> {activeBooking.vehicleTitle}
-              {activeBooking.startAt && (
-                <span style={{ color: '#64748b', marginLeft: '0.5rem' }}>
-                  с {new Date(activeBooking.startAt).toLocaleTimeString('ru')}
-                </span>
-              )}
-              {liveRoute && liveRoute.points.length > 0 && (
-                <span style={{ color: '#64748b', marginLeft: '0.5rem' }}>
-                  · {liveRoute.distanceKm.toFixed(2)} км · {liveRoute.avgSpeedKph.toFixed(0)} км/ч
-                </span>
-              )}
-            </div>
-            <button className="map-active-ride__end" onClick={handleEndRide}>
-              Завершить поездку
-            </button>
-          </div>
+          <ActiveRideOverlay
+            booking={activeBooking}
+            route={liveRoute}
+            pricePerMinute={activeVehiclePricePerMin}
+            onEnd={handleEndRide}
+          />
         )}
 
         <div className="map-page__toolbar map-page__toolbar--grid">
