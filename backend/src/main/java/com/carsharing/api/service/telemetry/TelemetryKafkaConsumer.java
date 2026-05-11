@@ -29,6 +29,7 @@ public class TelemetryKafkaConsumer {
 
     private static final double COORD_EPSILON = 0.000005;
     private static final String DLQ_TOPIC = "vehicle-telemetry-dlq";
+    private static final long MAX_ALLOWED_FUTURE_SECONDS = 3600;
 
     private final TelemetryPointRepository telemetryPointRepository;
     private final VehicleRepository vehicleRepository;
@@ -128,7 +129,14 @@ public class TelemetryKafkaConsumer {
                 speed = Math.max(0, Math.min(speed, 300));
             }
 
-            if (ts.isAfter(Instant.now().plusSeconds(60))) {
+            Instant now = Instant.now();
+            if (ts.isAfter(now.plusSeconds(MAX_ALLOWED_FUTURE_SECONDS))) {
+                log.warn("Timestamp too far in future for vehicle {}", vehicleId);
+                sendToDlq(message, new IllegalArgumentException("Timestamp too far in the future"));
+                return null;
+            }
+
+            if (ts.isAfter(now.plusSeconds(60))) {
                 log.debug("Accepted future timestamp for vehicle {}: {}", vehicleId, ts);
             }
 

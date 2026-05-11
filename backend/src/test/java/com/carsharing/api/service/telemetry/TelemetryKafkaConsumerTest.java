@@ -14,6 +14,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,10 +70,10 @@ class TelemetryKafkaConsumerTest {
 
         consumer.consumeBatch(messages);
 
-        ArgumentCaptor<List<TelemetryPoint>> savedCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<Iterable<TelemetryPoint>> savedCaptor = ArgumentCaptor.forClass(Iterable.class);
         verify(telemetryPointRepository).saveAll(savedCaptor.capture());
 
-        List<TelemetryPoint> saved = savedCaptor.getValue();
+        List<TelemetryPoint> saved = toList(savedCaptor.getValue());
         assertEquals(120, saved.size(), "Все точки батча должны сохраняться");
         verify(kafkaTemplate, never()).send(any(), any());
     }
@@ -97,10 +98,10 @@ class TelemetryKafkaConsumerTest {
 
         consumer.consumeBatch(messages);
 
-        ArgumentCaptor<List<TelemetryPoint>> savedCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<Iterable<TelemetryPoint>> savedCaptor = ArgumentCaptor.forClass(Iterable.class);
         verify(telemetryPointRepository).saveAll(savedCaptor.capture());
 
-        List<TelemetryPoint> saved = savedCaptor.getValue();
+        List<TelemetryPoint> saved = toList(savedCaptor.getValue());
         assertEquals(3, saved.size());
         assertTrue(!saved.get(0).getTs().isAfter(saved.get(1).getTs()));
         assertTrue(!saved.get(1).getTs().isAfter(saved.get(2).getTs()));
@@ -116,5 +117,14 @@ class TelemetryKafkaConsumerTest {
                 "speed", 42.0,
                 "ignition", true
         ));
+    }
+
+    private List<TelemetryPoint> toList(Iterable<TelemetryPoint> points) {
+        if (points instanceof Collection<TelemetryPoint> collection) {
+            return new ArrayList<>(collection);
+        }
+        List<TelemetryPoint> list = new ArrayList<>();
+        points.forEach(list::add);
+        return list;
     }
 }
