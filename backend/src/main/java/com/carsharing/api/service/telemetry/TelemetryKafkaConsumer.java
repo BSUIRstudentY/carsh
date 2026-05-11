@@ -42,12 +42,16 @@ public class TelemetryKafkaConsumer {
     @KafkaListener(topics = "vehicle-telemetry", groupId = "carsharing-telemetry")
     public void consumeBatch(List<String> messages) {
         List<TelemetryPoint> toSave = new ArrayList<>();
-        Map<Long, double[]> vehiclePositions = new ConcurrentHashMap<>();
+        List<TelemetryPoint> liveUpdates = new ArrayList<>();
+        Map<Long, VehiclePosition> vehiclePositions = new ConcurrentHashMap<>();
 
         for (String message : messages) {
             try {
                 TelemetryPoint point = parseAndValidate(message);
                 if (point == null) continue;
+
+                toSave.add(point);
+                updateLatestVehiclePosition(vehiclePositions, point);
 
                 if (isRateLimited(point.getVehicleId(), point.getTs())) {
                     log.debug("Rate limited point for vehicle {}", point.getVehicleId());
@@ -59,9 +63,7 @@ public class TelemetryKafkaConsumer {
                     continue;
                 }
 
-                toSave.add(point);
-                vehiclePositions.put(point.getVehicleId(),
-                        new double[]{point.getLat(), point.getLon()});
+                liveUpdates.add(point);
                 lastPointTime.put(point.getVehicleId(), point.getTs());
                 lastPointCoords.put(point.getVehicleId(),
                         new double[]{point.getLat(), point.getLon()});
@@ -78,7 +80,7 @@ public class TelemetryKafkaConsumer {
 
         vehiclePositions.forEach(this::updateVehiclePosition);
 
-        for (TelemetryPoint point : toSave) {
+        for (TelemetryPoint point : liveUpdates) {
             pushToWebSocket(point);
         }
     }
@@ -142,7 +144,8 @@ public class TelemetryKafkaConsumer {
     private boolean isDuplicate(long vehicleId, double lat, double lon) {
         double[] prev = lastPointCoords.get(vehicleId);
         if (prev == null) {
-            Sort sort = Sort.by(Sort.Direction.DESC, "ts");
+            Sort sort = Sort.by(Sort.Direction.DESC, "ts")
+                    .and(Sort.by(Sort.Direction.DESC, "id"));
             var last = telemetryPointRepository.findByVehicleId(vehicleId, PageRequest.of(0, 1, sort));
             if (last.isEmpty()) return false;
             prev = new double[]{last.get(0).getLat(), last.get(0).getLon()};
@@ -152,12 +155,24 @@ public class TelemetryKafkaConsumer {
                 && Math.abs(prev[1] - lon) < COORD_EPSILON;
     }
 
-    private void updateVehiclePosition(long vehicleId, double[] coords) {
+    private void updateLatestVehiclePosition(Map<Long, VehiclePosition> vehiclePositions, TelemetryPoint point) {
+        VehiclePosition current = vehiclePositions.get(point.getVehicleId());
+        long pointTsMillis = point.getTs().toEpochMilli();
+        if (current == null || pointTsMillis >= current.tsMillis()) {
+            vehiclePositions.put(point.getVehicleId(),
+                    new VehiclePosition(point.getLat(), point.getLon(), pointTsMillis));
+        }
+    }
+
+    private void updateVehiclePosition(long vehicleId, VehiclePosition position) {
         vehicleRepository.findById(vehicleId).ifPresent(vehicle -> {
-            vehicle.setLastLatitude(coords[0]);
-            vehicle.setLastLongitude(coords[1]);
+            vehicle.setLastLatitude(position.lat());
+            vehicle.setLastLongitude(position.lon());
             vehicleRepository.save(vehicle);
         });
+    }
+
+    private record VehiclePosition(double lat, double lon, long tsMillis) {
     }
 
     private void pushToWebSocket(TelemetryPoint point) {

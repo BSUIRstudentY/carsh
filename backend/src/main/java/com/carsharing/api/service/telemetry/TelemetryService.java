@@ -48,15 +48,20 @@ public class TelemetryService {
     }
 
     public RouteResponse getRouteByBooking(Long bookingId) {
-        Sort sort = Sort.by(Sort.Direction.ASC, "ts");
+        Sort sort = routeSort();
         List<TelemetryPoint> points = telemetryPointRepository.findByBookingId(bookingId, sort);
         return buildRouteResponse(points);
     }
 
     public RouteResponse getLiveRoute(Long vehicleId) {
-        Sort sort = Sort.by(Sort.Direction.ASC, "ts");
+        Sort sort = routeSort();
         List<TelemetryPoint> points = telemetryPointRepository.findByVehicleId(vehicleId, sort);
         return buildRouteResponse(points);
+    }
+
+    private Sort routeSort() {
+        return Sort.by(Sort.Direction.ASC, "ts")
+                .and(Sort.by(Sort.Direction.ASC, "id"));
     }
 
     private RouteResponse buildRouteResponse(List<TelemetryPoint> points) {
