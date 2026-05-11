@@ -28,4 +28,9 @@ public class ContactService {
     public List<ContactRequest> findAll() {
         return contactRequestRepository.findAllByOrderByCreatedAtDesc();
     }
+
+    @Transactional(readOnly = true)
+    public List<ContactRequest> findByEmail(String email) {
+        return contactRequestRepository.findByEmailOrderByCreatedAtDesc(email);
+    }
 }

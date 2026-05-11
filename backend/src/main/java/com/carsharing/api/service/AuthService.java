@@ -99,6 +99,47 @@ public class AuthService {
         );
     }
 
+    @Transactional
+    public UserProfileResponse updateProfile(Long userId, String firstName, String lastName, String phone) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (phone != null) {
+            String p = phone.strip();
+            if (!p.isEmpty() && !p.equals(user.getPhone())) {
+                if (userRepository.existsByPhone(p)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone already taken");
+                }
+                user.setPhone(p);
+            }
+        }
+        userRepository.save(user);
+        return new UserProfileResponse(user.getId(), user.getEmail(), user.getPhone(),
+                user.getFirstName(), user.getLastName(), user.getRole(), user.getStatus());
+    }
+
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Wrong current password");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        user.setStatus("DELETED");
+        user.setEmail(null);
+        user.setPhone(null);
+        userRepository.save(user);
+    }
+
     private TokenResponse issueTokenPair(User user) {
         String access = jwtService.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refresh = refreshTokenService.createAndStore(user);

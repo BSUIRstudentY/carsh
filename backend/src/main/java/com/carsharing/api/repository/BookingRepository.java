@@ -14,10 +14,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId AND b.status = 'ACTIVE'")
+    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId AND b.status IN ('ACTIVE', 'RESERVED')")
     Optional<Booking> findActiveByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT b FROM Booking b WHERE b.vehicle.id = :vehicleId AND b.status = 'ACTIVE'")
+    @Query("SELECT b FROM Booking b WHERE b.vehicle.id = :vehicleId AND b.status IN ('ACTIVE', 'RESERVED')")
     Optional<Booking> findActiveByVehicleId(@Param("vehicleId") Long vehicleId);
 
     List<Booking> findAllByOrderByCreatedAtDesc();

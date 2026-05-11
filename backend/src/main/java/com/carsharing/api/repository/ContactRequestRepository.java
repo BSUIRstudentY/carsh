@@ -10,4 +10,5 @@ import java.util.List;
 public interface ContactRequestRepository extends JpaRepository<ContactRequest, Long> {
 
     List<ContactRequest> findAllByOrderByCreatedAtDesc();
+    List<ContactRequest> findByEmailOrderByCreatedAtDesc(String email);
 }

@@ -87,6 +87,9 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose, onBooked }: Pro
 
   const selectedBulk = bulkAll.find((t) => t.id === bulkId) ?? bulkAll[0] ?? null
 
+  const [promoInput, setPromoInput] = useState('')
+  const [promoStatus, setPromoStatus] = useState('')
+
   const handleBook = async () => {
     if (!isAuthenticated) {
       navigate('/login')
@@ -102,11 +105,19 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose, onBooked }: Pro
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ vehicleId: vehicle.id }),
+        body: JSON.stringify({
+          vehicleId: vehicle.id,
+          tariffMode: mode,
+          promoCode: promoInput.trim() || null,
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.message || data.error || 'Не удалось забронировать')
+      }
+      const booking = await res.json()
+      if (booking.discountPercent > 0) {
+        setPromoStatus(`Скидка ${booking.discountPercent}% применена!`)
       }
       onBooked?.()
       onClose()
@@ -247,6 +258,21 @@ export function VehicleBookingPanel({ vehicle, tariffs, onClose, onBooked }: Pro
 
           {!perTime && !perKm && bulkAll.length === 0 && (
             <p className="map-panel__empty-tariff">Нет тарифов для этого класса в каталоге.</p>
+          )}
+
+          {isAuthenticated && (
+            <div className="map-panel__block" style={{ marginTop: '0.75rem' }}>
+              <label style={{ display: 'grid', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b' }}>Промокод (если есть)</span>
+                <input
+                  value={promoInput}
+                  onChange={e => setPromoInput(e.target.value.toUpperCase())}
+                  placeholder="WELCOME"
+                  style={{ padding: '0.5rem 0.65rem', borderRadius: 8, border: '1px solid rgba(15,20,25,0.12)', background: 'rgba(255,255,255,0.9)', fontFamily: 'monospace', fontSize: '0.9rem', letterSpacing: '0.05em' }}
+                />
+              </label>
+              {promoStatus && <p style={{ color: '#059669', fontSize: '0.82rem', marginTop: '0.35rem', fontWeight: 600 }}>{promoStatus}</p>}
+            </div>
           )}
 
           {bookingError && (
