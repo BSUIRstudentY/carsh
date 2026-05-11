@@ -36,6 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             new AntPathRequestMatcher("/api/v1/auth/logout"),
             new AntPathRequestMatcher("/api/v1/health"),
             new AntPathRequestMatcher("/api/v1/public/**"),
+            new AntPathRequestMatcher("/api/v1/telemetry/**"),
             new AntPathRequestMatcher("/actuator/health"),
             new AntPathRequestMatcher("/h2-console/**"),
             new AntPathRequestMatcher("/error")
@@ -65,10 +66,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             var claims = jwtService.parseAndValidate(token);
             Long userId = Long.parseLong(claims.getSubject());
+            String role = claims.get("role", String.class);
+            String authority = "ROLE_" + (role != null ? role : "USER");
             var auth = new UsernamePasswordAuthenticationToken(
                     userId,
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                    List.of(new SimpleGrantedAuthority(authority))
             );
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);

@@ -28,7 +28,8 @@ public class AuthService {
     private final JwtProperties jwtProperties;
 
     @Transactional
-    public TokenResponse register(String email, String rawPassword, String phone) {
+    public TokenResponse register(String email, String rawPassword, String phone,
+                                  String firstName, String lastName) {
         String normalizedEmail = email.strip().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
@@ -45,6 +46,9 @@ public class AuthService {
                 .email(normalizedEmail)
                 .phone(phone != null && !phone.isBlank() ? phone.strip() : null)
                 .passwordHash(passwordEncoder.encode(rawPassword))
+                .firstName(firstName)
+                .lastName(lastName)
+                .role("USER")
                 .status("ACTIVE")
                 .createdAt(now)
                 .updatedAt(now)
@@ -88,12 +92,15 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getPhone(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getRole(),
                 user.getStatus()
         );
     }
 
     private TokenResponse issueTokenPair(User user) {
-        String access = jwtService.createAccessToken(user.getId(), user.getEmail());
+        String access = jwtService.createAccessToken(user.getId(), user.getEmail(), user.getRole());
         String refresh = refreshTokenService.createAndStore(user);
         long expiresInSeconds = jwtProperties.accessTokenValidity().toSeconds();
         return new TokenResponse(access, refresh, "Bearer", expiresInSeconds);

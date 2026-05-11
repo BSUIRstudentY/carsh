@@ -38,6 +38,16 @@ public class User {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(name = "first_name", length = 128)
+    private String firstName;
+
+    @Column(name = "last_name", length = 128)
+    private String lastName;
+
+    @Column(nullable = false, length = 32)
+    @Builder.Default
+    private String role = "USER";
+
     @Column(nullable = false, length = 32)
     @Builder.Default
     private String status = "PENDING";

@@ -23,12 +23,13 @@ public class JwtService {
         this.signingKey = Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createAccessToken(Long userId, String email) {
+    public String createAccessToken(Long userId, String email, String role) {
         Instant now = Instant.now();
         Instant exp = now.plus(properties.accessTokenValidity());
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email != null ? email : "")
+                .claim("role", role != null ? role : "USER")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(signingKey)

@@ -27,7 +27,8 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request.email(), request.password(), request.phone());
+        return authService.register(request.email(), request.password(), request.phone(),
+                request.firstName(), request.lastName());
     }
 
     @PostMapping("/login")
